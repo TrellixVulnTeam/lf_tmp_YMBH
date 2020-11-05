@@ -1,3 +1,32 @@
+### Wonjin edit :
+I added `scripts/convert_model_to_long.py` which is a revised (and also a cli) version of `scripts/convert_model_to_long.ipython`. 
+<br>This example will generate roberta-4096 version in tmp folder.
+<br>You need to change a few lines in the code for the example code to run without errors:
+```python
+training_args.val_datapath = 'wikitext-103-raw/wiki.valid.raw'
+training_args.train_datapath = 'wikitext-103-raw/wiki.train.raw'
+```
+to match the location of pretraining metrials.
+<br>(to download wikitext-103-raw:
+```bash
+wget https://s3.amazonaws.com/research.metamind.io/wikitext/wikitext-103-raw-v1.zip
+unzip wikitext-103-raw-v1.zip
+```
+
+
+ENV setting:
+```bash
+conda create --name longformer python=3.7
+conda activate longformer
+conda install cudatoolkit=10.0
+pip install git+https://github.com/allenai/longformer.git
+```
+
+
+And also need to install `pip install transformers==3.0.2`.
+
+
+<hr>
 # <p align=center>`Longformer`</p>
 `Longformer` is a BERT-like model for long documents.
 
