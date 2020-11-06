@@ -7,6 +7,7 @@ from transformers import TrainingArguments, HfArgumentParser
 from transformers.modeling_longformer import LongformerSelfAttention
 
 import torch
+import pdb
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -37,7 +38,8 @@ def create_long_model(save_model_to, attention_window, max_pos):
     model = RobertaForMaskedLM.from_pretrained('roberta-base')
     tokenizer = RobertaTokenizerFast.from_pretrained('roberta-base', model_max_length=max_pos)
     config = model.config
-
+    #pdb.set_trace()
+    
     # extend position embeddings
     tokenizer.model_max_length = max_pos
     tokenizer.init_kwargs['model_max_length'] = max_pos
@@ -102,6 +104,7 @@ def pretrain_and_evaluate(args, model, tokenizer, eval_only, model_path):
                       train_dataset=train_dataset, eval_dataset=val_dataset, prediction_loss_only=True,)
 
     eval_loss = trainer.evaluate()
+    #pdb.set_trace()
     eval_loss = eval_loss['eval_loss']
     logger.info(f'Initial eval bpc: {eval_loss/math.log(2)}')
     
@@ -175,8 +178,8 @@ model = RobertaLongForMaskedLM.from_pretrained(model_path)
 
 # 4) Pretrain roberta-base-4096 for 3k steps, each steps has 2^18 tokens. Notes:
 logger.info(f'Pretraining roberta-base-{model_args.max_pos} ... ')
-
-training_args.max_steps = 3   ## <<<<<<<<<<<<<<<<<<<<<<<< REMOVE THIS <<<<<<<<<<<<<<<<<<<<<<<<
+pdb.set_trace()
+#training_args.max_steps = 3   ## <<<<<<<<<<<<<<<<<<<<<<<< REMOVE THIS <<<<<<<<<<<<<<<<<<<<<<<<
 training_args.per_gpu_train_batch_size = 1
 
 pretrain_and_evaluate(training_args, model, tokenizer, eval_only=False, model_path=training_args.output_dir)

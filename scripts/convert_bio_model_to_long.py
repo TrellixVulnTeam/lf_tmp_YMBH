@@ -3,7 +3,7 @@ import os
 import math
 from dataclasses import dataclass, field
 # from transformers import RobertaForMaskedLM, RobertaTokenizerFast
-from transformers import BertForMaskedLM # BertTokenizerFast
+from transformers import BertForMaskedLM, BertTokenizerFast # BertTokenizerFast
 from transformers import AutoTokenizer, AutoModel
 from transformers import RobertaForMaskedLM, RobertaTokenizerFast
 from transformers import TextDataset, DataCollatorForLanguageModeling, Trainer
@@ -41,9 +41,9 @@ class BertLongForMaskedLM(BertForMaskedLM):
 def create_long_model(save_model_to, attention_window, max_pos):
     model = BertForMaskedLM.from_pretrained("microsoft/BiomedNLP-PubMedBERT-base-uncased-abstract")
     config = model.config
-    tokenizer = AutoTokenizer.from_pretrained("microsoft/BiomedNLP-PubMedBERT-base-uncased-abstract", model_max_length=max_pos)
+    tokenizer = BertTokenizerFast.from_pretrained("microsoft/BiomedNLP-PubMedBERT-base-uncased-abstract", model_max_length=max_pos)
     #tokenizer = RobertaTokenizerFast.from_pretrained('roberta-base', model_max_length=max_pos)
-
+    #pdb.set_trace()
     # extend position embeddings
     tokenizer.model_max_length = max_pos
     tokenizer.init_kwargs['model_max_length'] = max_pos
@@ -80,6 +80,7 @@ def create_long_model(save_model_to, attention_window, max_pos):
     logger.info(f'saving model to {save_model_to}')
     model.save_pretrained(save_model_to)
     tokenizer.save_pretrained(save_model_to)
+    #pdb.set_trace()
     return model, tokenizer
 
 
@@ -92,22 +93,31 @@ def copy_proj_layers(model):
 
 
 def pretrain_and_evaluate(args, model, tokenizer, eval_only, model_path):
-    val_dataset = TextDataset(tokenizer=tokenizer,
-                              file_path=args.val_datapath,
-                              block_size=tokenizer.max_len)
+    if tokenizer.model_max_length > 1e8:
+        val_dataset = TextDataset(tokenizer=tokenizer,
+                                  file_path=args.val_datapath,
+                                  block_size=512)
+        logger.info(f'[WARNING] tokenizer.model_max_length > 10^8: {tokenizer.model_max_length} setting the value as 512 instead.')
+    else:
+        val_dataset = TextDataset(tokenizer=tokenizer,
+                                  file_path=args.val_datapath,
+                                  block_size=tokenizer.model_max_length) #  The `max_len` attribute has been deprecated 
+    
     if eval_only:
         train_dataset = val_dataset
     else:
         logger.info(f'Loading and tokenizing training data is usually slow: {args.train_datapath}')
-        train_dataset = TextDataset(tokenizer=tokenizer,
+        if tokenizer.model_max_length > 1e8:
+            train_dataset = TextDataset(tokenizer=tokenizer,
                                     file_path=args.train_datapath,
-                                    block_size=tokenizer.max_len)
+                                    block_size=512)
+            logger.info(f'[WARNING] tokenizer.model_max_length > 10^8: {tokenizer.model_max_length} setting the value as 512 instead.')
+        else:
+            train_dataset = TextDataset(tokenizer=tokenizer,
+                                    file_path=args.train_datapath,
+                                    block_size=tokenizer.model_max_length)
 
     data_collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=True, mlm_probability=0.15)
-    
-    logger.info(f'Need to inplement train/dev data input: len dev :{len(val_dataset)}. Abort pretrain_and_evaluate function')
-    #raise NotImplemented
-    return 
     
     trainer = Trainer(model=model, args=args, data_collator=data_collator,
                       train_dataset=train_dataset, eval_dataset=val_dataset, prediction_loss_only=True,)
@@ -165,7 +175,7 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 # 1) Evaluating PubMedBERT on MLM to establish a baseline. Validation bpc = 2.536 which is higher than the bpc values in table 6 here because wikitext103 is harder than our pretraining corpus.
 bert_base = BertForMaskedLM.from_pretrained("microsoft/BiomedNLP-PubMedBERT-base-uncased-abstract")
 # roberta_base_tokenizer = RobertaTokenizerFast.from_pretrained('PubMedBERT')
-tokenizer = AutoTokenizer.from_pretrained("microsoft/BiomedNLP-PubMedBERT-base-uncased-abstract")
+tokenizer = BertTokenizerFast.from_pretrained("microsoft/BiomedNLP-PubMedBERT-base-uncased-abstract")
 logger.info('Evaluating PubMedBERT (seqlen: 512) for refernece ...')
 pretrain_and_evaluate(training_args, bert_base, tokenizer, eval_only=True, model_path=None)
 
@@ -183,7 +193,7 @@ model, tokenizer = create_long_model(
 
 # 3) Load PubMedBERT-4096 from the disk. This model works for long sequences even without pretraining. If you don't want to pretrain, you can stop here and start finetuning your PubMedBERT\-4096 on downstream tasks 
 logger.info(f'Loading the model from {model_path}')
-tokenizer = AutoTokenizer.from_pretrained(model_path)
+tokenizer = BertTokenizerFast.from_pretrained(model_path)
 model = BertLongForMaskedLM.from_pretrained(model_path)
 
 

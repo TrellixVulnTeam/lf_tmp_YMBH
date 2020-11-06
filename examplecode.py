@@ -8,7 +8,9 @@ config = LongformerConfig.from_pretrained('downloads/longformer-base-4096/')
 # 'n2': for regular n2 attantion
 # 'tvm': a custom CUDA kernel implementation of our sliding window attention
 # 'sliding_chunks': a PyTorch implementation of our sliding window attention
-config.attention_mode = 'sliding_chunks'
+#config.attention_mode = 'n2'
+config.attention_mode = 'tvm'
+#config.attention_mode = 'sliding_chunks'
 
 model = Longformer.from_pretrained('downloads/longformer-base-4096/', config=config)
 tokenizer = RobertaTokenizer.from_pretrained('roberta-base')
@@ -19,7 +21,7 @@ SAMPLE_TEXT = ' '.join(['Hello world! '] * 1000)  # long input document
 input_ids = torch.tensor(tokenizer.encode(SAMPLE_TEXT)).unsqueeze(0)  # batch of size 1
 
 # TVM code doesn't work on CPU. Uncomment this if `config.attention_mode = 'tvm'`
-# model = model.cuda(); input_ids = input_ids.cuda()
+model = model.cuda(); input_ids = input_ids.cuda()
 
 # Attention mask values -- 0: no attention, 1: local attention, 2: global attention
 attention_mask = torch.ones(input_ids.shape, dtype=torch.long, device=input_ids.device) # initialize to local attention
