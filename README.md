@@ -1,5 +1,5 @@
 ### Wonjin edit :
-I added `scripts/convert_model_to_long.py` which is a revised (and also a cli) version of `scripts/convert_model_to_long.ipython`. 
+I added `scripts/convert_model_to_long.py` which is a revised (and also a cli) version of `scripts/convert_bio_model_to_long.ipython` (BERT based models inc. PubMedBERT) or `scripts/convert_model_to_long.ipython` (RoBERTa). 
 <br>This example will generate roberta-4096 version in tmp folder.
 <br>You need to change a few lines in the code for the example code to run without errors:
 ```python
